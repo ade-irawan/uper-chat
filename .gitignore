@@ -163,3 +163,7 @@ cython_debug/
 
 # LLM Models
 models/
+
+# The files for knowlege base
+knowledge_base/
+chroma_db/
