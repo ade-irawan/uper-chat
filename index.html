@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UPERCHAT</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .upload-section {
+            background-color: #f8f9fa;
+        }
+
+        .query-section {
+            background-color: #f8f9fa;
+        }
+
+        .response-section {
+            background-color: #f8f9fa;
+            display: none;
+        }
+
+        input[type="file"] {
+            display: block;
+            margin-bottom: 10px;
+            width: 100%;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .response-box {
+            background-color: white;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 10px;
+            border: 1px solid #ddd;
+        }
+
+        .context-box {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+
+        .loading {
+            text-align: center;
+            margin: 10px 0;
+            display: none;
+        }
+
+        .loading:after {
+            content: "...";
+            animation: dots 1.5s steps(5, end) infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: "."; }
+            40% { content: ".."; }
+            60%, 100% { content: "..."; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>UPER CHAT</h1>
+        
+        <div class="section upload-section">
+            <h2>Unggah File PDF</h2>
+            <input type="file" id="pdfFile" accept=".pdf">
+            <button onclick="uploadPDF()">Upload</button>
+            <div id="uploadStatus" class="status"></div>
+            <div id="uploadLoading" class="loading">Uploading and processing PDF</div>
+        </div>
+
+        <div class="section query-section">
+            <h2>Silahkan Ajukan Pertanyaan di bawah ini</h2>
+            <input type="text" id="queryInput" placeholder="Enter your question here">
+            <button onclick="submitQuery()">Submit Pertanyaan</button>
+            <div id="queryLoading" class="loading">Generating response</div>
+        </div>
+
+        <div class="section response-section" id="responseSection">
+            <h2>Response</h2>
+            <div class="response-box" id="responseText"></div>
+            <h3>Context Used</h3>
+            <div class="context-box" id="contextText"></div>
+        </div>
+    </div>
+
+    <script>
+        async function uploadPDF() {
+            const fileInput = document.getElementById('pdfFile');
+            const uploadStatus = document.getElementById('uploadStatus');
+            const uploadLoading = document.getElementById('uploadLoading');
+            
+            if (!fileInput.files.length) {
+                showStatus(uploadStatus, 'Please select a file first.', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                uploadLoading.style.display = 'block';
+                uploadStatus.style.display = 'none';
+                
+                const response = await fetch('/upload-pdf', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showStatus(uploadStatus, `File ${result.filename} uploaded and processed successfully!`, 'success');
+                } else {
+                    showStatus(uploadStatus, `Error: ${result.detail}`, 'error');
+                }
+            } catch (error) {
+                showStatus(uploadStatus, `Error: ${error.message}`, 'error');
+            } finally {
+                uploadLoading.style.display = 'none';
+            }
+        }
+
+        async function submitQuery() {
+            const queryInput = document.getElementById('queryInput');
+            const responseSection = document.getElementById('responseSection');
+            const responseText = document.getElementById('responseText');
+            const contextText = document.getElementById('contextText');
+            const queryLoading = document.getElementById('queryLoading');
+
+            if (!queryInput.value.trim()) {
+                alert('Please enter a question');
+                return;
+            }
+
+            try {
+                queryLoading.style.display = 'block';
+                responseSection.style.display = 'none';
+
+                const response = await fetch('/query', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        query: queryInput.value
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    responseText.textContent = result.response;
+                    contextText.textContent = result.context.join('\n\n');
+                    responseSection.style.display = 'block';
+                } else {
+                    alert(`Error: ${result.detail}`);
+                }
+            } catch (error) {
+                alert(`Error: ${error.message}`);
+            } finally {
+                queryLoading.style.display = 'none';
+            }
+        }
+
+        function showStatus(element, message, type) {
+            element.textContent = message;
+            element.className = `status ${type}`;
+            element.style.display = 'block';
+        }
+
+        // Add enter key support for query input
+        document.getElementById('queryInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                submitQuery();
+            }
+        });
+    </script>
+</body>
+</html>
